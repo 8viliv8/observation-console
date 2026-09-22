@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>THRESHOLD / LINE / PAINT v0.3</title>
+<style>
+:root{--bg:#0b0c0e;--panel:#121419;--panel2:#181b21;--line:#2a2f39;--text:#f3f4f6;--muted:#8f98a8;--accent:#e8ff64;--blue:#8fd4ff}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{min-height:100dvh}
+header{position:sticky;top:0;z-index:30;padding:calc(10px + env(safe-area-inset-top)) 14px 10px;background:rgba(11,12,14,.94);border-bottom:1px solid var(--line);backdrop-filter:blur(16px)}
+.brand{display:flex;justify-content:space-between;align-items:end}.brand h1{margin:0;font-size:16px;letter-spacing:.13em}.brand small{font-size:10px;color:var(--muted)}
+main{width:min(1200px,100%);margin:auto;padding:12px 12px calc(28px + env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) 350px;gap:12px}
+.previewCol{position:sticky;top:70px;align-self:start;z-index:10}.preview,.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.tabs{padding:8px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+.viewer{background:#050506;min-height:62dvh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}.viewer.empty:after{content:"画像を読み込んでください";position:absolute;color:#59606c;font-size:12px}
+canvas{display:block;max-width:100%;max-height:72dvh;width:auto;height:auto;touch-action:none}
+.brushbar{padding:8px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;flex-wrap:wrap}.brushbar label{font-size:10px;color:var(--muted)}
+.side{display:flex;flex-direction:column;gap:10px}.card{padding:11px}.title{font-size:10px;letter-spacing:.14em;color:var(--muted);margin-bottom:9px}
+button,.filebtn,select{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:11px;padding:10px;font-size:12px;font-weight:650;text-align:center}
+button.active{border-color:var(--accent);color:var(--accent)}button.primary,.filebtn.primary{background:var(--accent);color:#0b0c0e;border-color:var(--accent)}button.blue{border-color:var(--blue);color:var(--blue)}button:disabled{opacity:.35}
+.filebtn{display:block;position:relative}.filebtn input{position:absolute;inset:0;width:100%;height:100%;opacity:.001;cursor:pointer}
+.row{display:flex;gap:7px}.row>*{flex:1}.drop{margin-top:8px;border:1px dashed #39404d;border-radius:12px;padding:10px;text-align:center;color:var(--muted);font-size:11px}
+.status,.hint{font-size:10px;color:var(--muted);line-height:1.45}.status{margin-top:7px;min-height:14px}
+.control{margin-top:10px}.head{display:flex;justify-content:space-between;font-size:11px;margin-bottom:5px}.head output{color:var(--accent)}input[type=range]{width:100%;accent-color:var(--accent)}
+.switchrow{display:flex;justify-content:space-between;align-items:center;margin-top:9px;font-size:11px}.switch{position:relative;width:43px;height:25px}.switch input{display:none}.knob{position:absolute;inset:0;background:#2a2f38;border-radius:99px}.knob:after{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;background:white;border-radius:50%;transition:.15s}.switch input:checked+.knob{background:var(--accent)}.switch input:checked+.knob:after{transform:translateX(18px)}
+@media(max-width:820px){main{grid-template-columns:1fr}.previewCol{top:62px}.viewer{min-height:40dvh}canvas{max-height:48dvh}}
+</style></head>
+<body><header><div class="brand"><h1>THRESHOLD / LINE / PAINT</h1><small>v0.3 · HTTPS</small></div></header>
+<main>
+<div class="previewCol"><section class="preview">
+<div class="tabs"><button id="vOriginal">ORIGINAL</button><button id="vLine">LINE</button><button id="vPaint">PAINT</button><button id="vComposite" class="active">COMPOSITE</button></div>
+<div id="viewer" class="viewer empty"><canvas id="canvas"></canvas></div>
+<div class="brushbar"><button id="smudge" class="blue">SMUDGE OFF</button><label>SIZE <input id="smudgeSize" type="range" min="8" max="120" value="36"></label><label>POWER <input id="smudgePower" type="range" min="1" max="100" value="45"></label><span class="hint">PAINT / COMPOSITEを指で擦る</span></div>
+</section></div>
+<aside class="side">
+<section class="card"><div class="title">SOURCE — v0.2の読込処理を維持</div>
+<label class="filebtn primary">写真 / 画像を選ぶ<input id="fileInput" type="file" accept="image/*"></label>
+<label class="filebtn" style="margin-top:7px">カメラで撮る<input id="cameraInput" type="file" accept="image/*" capture="environment"></label>
+<div id="drop" class="drop">PC: ドラッグ＆ドロップ</div><div id="status" class="status">準備完了</div></section>
+<section class="card"><div class="title">A — LINE OUTPUT</div><div class="row"><button id="edge" class="active">EDGE</button><button id="tone">TONE</button></div>
+<div class="control"><div class="head"><span>THRESHOLD</span><output id="thresholdO">48</output></div><input id="threshold" type="range" min="0" max="100" value="48"></div>
+<div class="control"><div class="head"><span>DETAIL</span><output id="detailO">35</output></div><input id="detail" type="range" min="0" max="100" value="35"></div>
+<div class="control"><div class="head"><span>LINE</span><output id="lineO">2</output></div><input id="line" type="range" min="1" max="6" value="2"></div>
+<div class="control"><div class="head"><span>CONTRAST</span><output id="contrastO">12</output></div><input id="contrast" type="range" min="-50" max="80" value="12"></div>
+<div class="switchrow"><span>TRANSPARENT BG</span><label class="switch"><input id="transparent" type="checkbox" checked><span class="knob"></span></label></div></section>
+<section class="card"><div class="title">B — PAINT OUTPUT</div><div class="row"><button id="oil" class="active">OIL</button><button id="water">WATERCOLOR</button></div>
+<div class="control"><div class="head"><span>STRENGTH</span><output id="paintStrengthO">55</output></div><input id="paintStrength" type="range" min="0" max="100" value="55"></div>
+<div class="control"><div class="head"><span>ABSTRACTION</span><output id="abstractionO">40</output></div><input id="abstraction" type="range" min="0" max="100" value="40"></div>
+<div class="control"><div class="head"><span>COLOR STEPS</span><output id="stepsO">24</output></div><input id="steps" type="range" min="3" max="48" value="24"></div>
+<div class="control"><div class="head"><span>BLEED</span><output id="bleedO">30</output></div><input id="bleed" type="range" min="0" max="100" value="30"></div>
+<button id="paintReset" style="margin-top:9px;width:100%">SMUDGE RESET</button></section>
+<section class="card"><div class="title">A + B — COMPOSITE</div>
+<div class="control"><div class="head"><span>LINE OPACITY</span><output id="opacityO">80</output></div><input id="opacity" type="range" min="0" max="100" value="80"></div>
+<select id="blend" style="width:100%;margin-top:7px"><option value="multiply">MULTIPLY</option><option value="source-over">NORMAL</option><option value="overlay">OVERLAY</option><option value="screen">SCREEN</option></select></section>
+<section class="card"><div class="title">SAVE</div><div class="row"><button id="saveLine" disabled>LINE</button><button id="savePaint" disabled>PAINT</button></div><button id="saveComposite" class="primary" disabled style="width:100%;margin-top:7px">COMPOSITE 保存 / 共有</button></section>
+</aside></main>
+<script>
+(()=>{
+const $=id=>document.getElementById(id), canvas=$('canvas'),ctx=canvas.getContext('2d',{willReadFrequently:true}),viewer=$('viewer'),status=$('status');
+const src=document.createElement('canvas'),sctx=src.getContext('2d',{willReadFrequently:true}),lc=document.createElement('canvas'),lctx=lc.getContext('2d',{willReadFrequently:true}),pb=document.createElement('canvas'),pbctx=pb.getContext('2d',{willReadFrequently:true}),pc=document.createElement('canvas'),pctx=pc.getContext('2d',{willReadFrequently:true}),cc=document.createElement('canvas'),cctx=cc.getContext('2d',{willReadFrequently:true});
+let loaded=false,name='image',lineMode='edge',paintMode='oil',view='composite',smudge=false,down=false,last=null,raf=0; const MAX_SIDE=1800;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+async function decodeImageFile(file){
+ try{return await new Promise((resolve,reject)=>{const url=URL.createObjectURL(file),i=new Image();i.onload=()=>{URL.revokeObjectURL(url);resolve(i)};i.onerror=e=>{URL.revokeObjectURL(url);reject(e)};i.src=url})}catch(e){}
+ try{return await new Promise((resolve,reject)=>{const fr=new FileReader();fr.onerror=()=>reject(fr.error||new Error('FileReader failed'));fr.onload=()=>{const i=new Image();i.onload=()=>resolve(i);i.onerror=reject;i.src=fr.result};fr.readAsDataURL(file)})}catch(e){}
+ if(typeof createImageBitmap==='function')return await createImageBitmap(file); throw new Error('この画像形式をブラウザでデコードできません');
+}
+async function loadFile(file){
+ if(!file){status.textContent='ファイルが選択されていません';return}
+ const n=(file.name||'').toLowerCase(),ok=!file.type||file.type.startsWith('image/')||/\.(png|jpe?g|webp|heic|heif|gif|bmp|avif)$/i.test(n); if(!ok){status.textContent='画像ファイルを選択してください';return}
+ status.textContent='読み込み中… '+(file.name||'');
+ try{const img=await decodeImageFile(file),w0=img.width||img.naturalWidth,h0=img.height||img.naturalHeight;if(!w0||!h0)throw new Error('画像サイズを取得できません');const scale=Math.min(1,MAX_SIDE/Math.max(w0,h0)),w=Math.max(1,Math.round(w0*scale)),h=Math.max(1,Math.round(h0*scale));
+ [src,lc,pb,pc,cc,canvas].forEach(c=>{c.width=w;c.height=h});sctx.clearRect(0,0,w,h);sctx.drawImage(img,0,0,w,h);if(img.close)img.close();loaded=true;name=(file.name||'image').replace(/\.[^.]+$/,'');viewer.classList.remove('empty');['saveLine','savePaint','saveComposite'].forEach(id=>$(id).disabled=false);status.textContent=w0+'×'+h0+' → 処理 '+w+'×'+h;processAll()}catch(e){console.error(e);status.textContent='画像は選択されましたがデコードに失敗：'+(e.message||'形式未対応')}
+}
+function blurGray(a,w,h,r){r=Math.max(0,Math.round(r));if(!r)return a;let t=new Float32Array(a.length),o=new Float32Array(a.length),z=r*2+1;for(let y=0;y<h;y++){let s=0;for(let x=-r;x<=r;x++)s+=a[y*w+clamp(x,0,w-1)];for(let x=0;x<w;x++){t[y*w+x]=s/z;s+=a[y*w+clamp(x+r+1,0,w-1)]-a[y*w+clamp(x-r,0,w-1)]}}for(let x=0;x<w;x++){let s=0;for(let y=-r;y<=r;y++)s+=t[clamp(y,0,h-1)*w+x];for(let y=0;y<h;y++){o[y*w+x]=s/z;s+=t[clamp(y+r+1,0,h-1)*w+x]-t[clamp(y-r,0,h-1)*w+x]}}return o}
+function dilate(a,w,h,n){for(let k=0;k<n;k++){let b=new Uint8Array(a.length);for(let y=0;y<h;y++)for(let x=0;x<w;x++){let on=0;for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1)&&!on;yy++)for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++)if(a[yy*w+xx]){on=1;break}b[y*w+x]=on}a=b}return a}
+function processLine(){if(!loaded)return;let w=src.width,h=src.height,img=sctx.getImageData(0,0,w,h),d=img.data,g=new Float32Array(w*h),cv=+$('contrast').value,f=(259*(cv+255))/(255*(259-cv));for(let i=0,p=0;i<g.length;i++,p+=4){let v=.2126*d[p]+.7152*d[p+1]+.0722*d[p+2];g[i]=clamp(f*(v-128)+128,0,255)}g=blurGray(g,w,h,Math.round((100-(+$('detail').value))/28));let m=new Uint8Array(w*h);
+ if(lineMode==='tone'){let t=255*(+$('threshold').value/100);for(let i=0;i<m.length;i++)m[i]=g[i]<t?1:0}else{let mag=new Float32Array(w*h),mx=1;for(let y=1;y<h-1;y++)for(let x=1;x<w-1;x++){let i=y*w+x,a=g[i-w-1],b=g[i-w],c=g[i-w+1],dd=g[i-1],ff=g[i+1],gg=g[i+w-1],hh=g[i+w],j=g[i+w+1],gx=(-a+c)+(-2*dd+2*ff)+(-gg+j),gy=(-a-2*b-c)+(gg+2*hh+j),q=Math.hypot(gx,gy);mag[i]=q;if(q>mx)mx=q}let cut=mx*(.05+(1-(+$('threshold').value)/100)*.55);for(let i=0;i<m.length;i++)m[i]=mag[i]>=cut?1:0}
+ let thick=+$('line').value;if(thick>1)m=dilate(m,w,h,thick-1);let out=lctx.createImageData(w,h),od=out.data,tr=$('transparent').checked;for(let i=0,p=0;i<m.length;i++,p+=4){if(tr){od[p]=od[p+1]=od[p+2]=0;od[p+3]=m[i]?255:0}else{let v=m[i]?0:255;od[p]=od[p+1]=od[p+2]=v;od[p+3]=255}}lctx.putImageData(out,0,0)}
+function blurRGBA(img,w,h,r){r=Math.max(0,Math.round(r));if(!r)return new Uint8ClampedArray(img.data);let a=img.data,t=new Float32Array(a.length),o=new Uint8ClampedArray(a.length),z=r*2+1;for(let y=0;y<h;y++)for(let c=0;c<4;c++){let s=0;for(let x=-r;x<=r;x++)s+=a[(y*w+clamp(x,0,w-1))*4+c];for(let x=0;x<w;x++){t[(y*w+x)*4+c]=s/z;s+=a[(y*w+clamp(x+r+1,0,w-1))*4+c]-a[(y*w+clamp(x-r,0,w-1))*4+c]}}for(let x=0;x<w;x++)for(let c=0;c<4;c++){let s=0;for(let y=-r;y<=r;y++)s+=t[(clamp(y,0,h-1)*w+x)*4+c];for(let y=0;y<h;y++){o[(y*w+x)*4+c]=Math.round(s/z);s+=t[(clamp(y+r+1,0,h-1)*w+x)*4+c]-t[(clamp(y-r,0,h-1)*w+x)*4+c]}}return o}
+function processPaint(){if(!loaded)return;let w=src.width,h=src.height,img=sctx.getImageData(0,0,w,h),strength=+$('paintStrength').value,abs=+$('abstraction').value,steps=+$('steps').value,bleed=+$('bleed').value,r=paintMode==='oil'?Math.round(1+abs/18):Math.round(1+abs/25),arr=blurRGBA(img,w,h,r),tmp=new ImageData(arr,w,h),arr2=blurRGBA(tmp,w,h,paintMode==='oil'?Math.round(strength/30):Math.round(bleed/25)),out=pbctx.createImageData(w,h),d=out.data;for(let i=0;i<d.length;i+=4){for(let c=0;c<3;c++){let v=Math.round((arr2[i+c]/255)*(steps-1))*(255/(steps-1));if(paintMode==='water')v=v*.88+255*.12;else if(c===0)v=Math.min(255,v*1.03+2);d[i+c]=v}d[i+3]=255}pbctx.putImageData(out,0,0);pctx.clearRect(0,0,w,h);pctx.drawImage(pb,0,0)}
+function composite(){if(!loaded)return;cctx.clearRect(0,0,cc.width,cc.height);cctx.drawImage(pc,0,0);cctx.globalAlpha=+$('opacity').value/100;cctx.globalCompositeOperation=$('blend').value;cctx.drawImage(lc,0,0);cctx.globalAlpha=1;cctx.globalCompositeOperation='source-over'}
+function draw(){if(!loaded)return;ctx.clearRect(0,0,canvas.width,canvas.height);ctx.drawImage(view==='original'?src:view==='line'?lc:view==='paint'?pc:cc,0,0)}
+function processAll(){cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>{processLine();processPaint();composite();draw()})}
+['threshold','detail','line','contrast'].forEach(id=>$(id).oninput=()=>{$(id+'O').value=$(id).value;processLine();composite();draw()});$('transparent').onchange=()=>{processLine();composite();draw()};
+['paintStrength','abstraction','steps','bleed'].forEach(id=>$(id).oninput=()=>{$(id+'O').value=$(id).value;processPaint();composite();draw()});$('opacity').oninput=()=>{$('opacityO').value=$('opacity').value;composite();draw()};$('blend').onchange=()=>{composite();draw()};
+$('edge').onclick=()=>{lineMode='edge';$('edge').classList.add('active');$('tone').classList.remove('active');processLine();composite();draw()};$('tone').onclick=()=>{lineMode='tone';$('tone').classList.add('active');$('edge').classList.remove('active');processLine();composite();draw()};
+$('oil').onclick=()=>{paintMode='oil';$('oil').classList.add('active');$('water').classList.remove('active');processPaint();composite();draw()};$('water').onclick=()=>{paintMode='water';$('water').classList.add('active');$('oil').classList.remove('active');processPaint();composite();draw()};
+function setView(v){view=v;['vOriginal','vLine','vPaint','vComposite'].forEach(id=>$(id).classList.remove('active'));$('v'+v[0].toUpperCase()+v.slice(1)).classList.add('active');draw()}$('vOriginal').onclick=()=>setView('original');$('vLine').onclick=()=>setView('line');$('vPaint').onclick=()=>setView('paint');$('vComposite').onclick=()=>setView('composite');
+$('fileInput').addEventListener('change',e=>{loadFile(e.target.files&&e.target.files[0]);e.target.value=''});$('cameraInput').addEventListener('change',e=>{loadFile(e.target.files&&e.target.files[0]);e.target.value=''});['dragenter','dragover'].forEach(ev=>$('drop').addEventListener(ev,e=>e.preventDefault()));$('drop').addEventListener('drop',e=>{e.preventDefault();loadFile(e.dataTransfer.files[0])});
+$('smudge').onclick=()=>{smudge=!smudge;$('smudge').textContent=smudge?'SMUDGE ON':'SMUDGE OFF';$('smudge').classList.toggle('active',smudge)};
+function point(e){let r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
+function smear(pt,prev){if(!loaded||!smudge||(view!=='paint'&&view!=='composite'))return;let rad=+$('smudgeSize').value,pow=+$('smudgePower').value/100,w=pc.width,h=pc.height,x=Math.round(clamp(pt.x-rad,0,w-1)),y=Math.round(clamp(pt.y-rad,0,h-1)),sw=Math.round(clamp(rad*2,1,w-x)),sh=Math.round(clamp(rad*2,1,h-y));if(sw<2||sh<2)return;let patch=pctx.getImageData(x,y,sw,sh),b=blurRGBA(patch,sw,sh,Math.max(1,Math.round(rad/8))),off=document.createElement('canvas');off.width=sw;off.height=sh;off.getContext('2d').putImageData(new ImageData(b,sw,sh),0,0);let dx=prev?(pt.x-prev.x)*.35:0,dy=prev?(pt.y-prev.y)*.35:0;pctx.save();pctx.beginPath();pctx.arc(pt.x,pt.y,rad,0,Math.PI*2);pctx.clip();pctx.globalAlpha=.25+pow*.5;pctx.drawImage(off,x+dx,y+dy);pctx.restore();composite();draw()}
+canvas.onpointerdown=e=>{if(!smudge)return;down=true;last=point(e);smear(last,null);canvas.setPointerCapture(e.pointerId)};canvas.onpointermove=e=>{if(!down)return;let p=point(e);smear(p,last);last=p};canvas.onpointerup=canvas.onpointercancel=()=>{down=false;last=null};
+$('paintReset').onclick=()=>{if(!loaded)return;pctx.clearRect(0,0,pc.width,pc.height);pctx.drawImage(pb,0,0);composite();draw()};
+function save(c,suffix){c.toBlob(async blob=>{if(!blob)return;let fn=name+'_'+suffix+'.png';try{let f=new File([blob],fn,{type:'image/png'});if(navigator.canShare&&navigator.canShare({files:[f]})&&navigator.share){await navigator.share({files:[f],title:'THRESHOLD / LINE / PAINT'});return}}catch(e){if(e.name==='AbortError')return}let u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=fn;a.click();setTimeout(()=>URL.revokeObjectURL(u),1500)},'image/png')}
+$('saveLine').onclick=()=>save(lc,'line');$('savePaint').onclick=()=>save(pc,'paint');$('saveComposite').onclick=()=>save(cc,'composite');
+})();
+</script></body></html>
