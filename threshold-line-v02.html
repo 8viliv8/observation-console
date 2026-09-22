@@ -1,0 +1,352 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no" />
+<title>THRESHOLD / LINE v0.2</title>
+<style>
+:root{
+  --bg:#0b0c0e; --panel:#121419; --panel2:#181b21; --line:#2a2f39;
+  --text:#f3f4f6; --muted:#8f98a8; --accent:#e8ff64; --danger:#ff6b6b;
+}
+*{box-sizing:border-box} html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100dvh;display:flex;flex-direction:column}
+header{position:sticky;top:0;z-index:5;padding:calc(14px + env(safe-area-inset-top)) 16px 12px;border-bottom:1px solid var(--line);background:rgba(11,12,14,.92);backdrop-filter:blur(18px)}
+.brand{display:flex;align-items:end;justify-content:space-between;gap:12px}.brand h1{font-size:18px;letter-spacing:.16em;margin:0}.brand small{color:var(--muted);font-size:11px}
+main{width:min(1180px,100%);margin:0 auto;padding:14px 14px calc(32px + env(safe-area-inset-bottom));display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:14px}
+.viewer{background:#050506;border:1px solid var(--line);border-radius:18px;min-height:66dvh;display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden}
+.viewer.empty::after{content:"画像を読み込んでください";color:#59606c;font-size:13px;letter-spacing:.06em;position:absolute}
+canvas{display:block;max-width:100%;max-height:76dvh;width:auto;height:auto;touch-action:none}
+.controls{display:flex;flex-direction:column;gap:10px}.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:12px}.title{font-size:11px;letter-spacing:.14em;color:var(--muted);margin-bottom:10px}.row{display:flex;gap:8px}.row>*{flex:1}
+button,.filebtn{appearance:none;border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:12px;padding:11px 12px;font-size:13px;font-weight:650;text-align:center;cursor:pointer}
+button.active{border-color:var(--accent);color:var(--accent)} button.primary,.filebtn.primary{background:var(--accent);color:#0b0c0e;border-color:var(--accent)} button:disabled{opacity:.35;cursor:not-allowed}
+input[type=file]{display:block;width:100%;font-size:16px;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:12px;min-height:48px}
+input[type=file]::file-selector-button{appearance:none;border:0;background:var(--accent);color:#0b0c0e;border-radius:9px;padding:9px 12px;margin-right:10px;font-weight:750}.control{margin:12px 0 2px}.control-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;font-size:12px}.control-head output{font-variant-numeric:tabular-nums;color:var(--accent)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.switchrow{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;margin-top:10px}.switch{position:relative;width:46px;height:27px;flex:0 0 auto}.switch input{display:none}.knob{position:absolute;inset:0;background:#2a2f38;border-radius:99px;transition:.15s}.knob:after{content:"";position:absolute;width:21px;height:21px;left:3px;top:3px;background:white;border-radius:50%;transition:.15s}.switch input:checked+.knob{background:var(--accent)}.switch input:checked+.knob:after{transform:translateX(19px);background:#0b0c0e}
+.status{font-size:11px;color:var(--muted);min-height:16px;line-height:1.45}.hint{font-size:11px;line-height:1.5;color:var(--muted)}
+.segment{display:grid;grid-template-columns:1fr 1fr;gap:6px}.segment button{padding:9px 8px}
+.drop{border:1px dashed #39404d;border-radius:14px;padding:12px;text-align:center;color:var(--muted);font-size:12px}
+@media(max-width:820px){main{grid-template-columns:1fr}.viewer{min-height:46dvh}.controls{order:2}canvas{max-height:56dvh}.brand h1{font-size:16px}}
+</style>
+</head>
+<body>
+<header><div class="brand"><h1>THRESHOLD / LINE</h1><small>v0.2 · HTTPS</small></div></header>
+<main>
+  <section id="viewer" class="viewer empty"><canvas id="canvas"></canvas></section>
+  <aside class="controls">
+    <section class="card">
+      <div class="title">SOURCE</div>
+      <label class="filebtn primary" style="display:block">
+        写真 / 画像を選ぶ
+        <input id="fileInput" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:.001;pointer-events:none" />
+      </label>
+      <label class="filebtn" style="display:block;margin-top:8px">
+        カメラで撮る
+        <input id="cameraInput" type="file" accept="image/*" capture="environment" style="position:absolute;width:1px;height:1px;opacity:.001;pointer-events:none" />
+      </label>
+      <div id="drop" class="drop" style="margin-top:9px">PCではここへドラッグ＆ドロップ</div>
+      <div id="status" class="status" style="margin-top:8px">未読み込み</div>
+    </section>
+
+    <section class="card">
+      <div class="title">EXTRACT</div>
+      <div class="segment">
+        <button id="modeEdge" class="active">EDGE / 写真</button>
+        <button id="modeTone">TONE / 絵</button>
+      </div>
+
+      <div class="control">
+        <div class="control-head"><span>THRESHOLD</span><output id="thresholdOut">48</output></div>
+        <input id="threshold" type="range" min="0" max="100" value="48" />
+      </div>
+      <div class="control">
+        <div class="control-head"><span>DETAIL</span><output id="detailOut">35</output></div>
+        <input id="detail" type="range" min="0" max="100" value="35" />
+      </div>
+      <div class="control">
+        <div class="control-head"><span>LINE</span><output id="lineOut">2</output></div>
+        <input id="line" type="range" min="1" max="6" value="2" />
+      </div>
+      <div class="control">
+        <div class="control-head"><span>CONTRAST</span><output id="contrastOut">12</output></div>
+        <input id="contrast" type="range" min="-50" max="80" value="12" />
+      </div>
+      <div class="switchrow"><span>INVERT（白黒反転）</span><label class="switch"><input id="invert" type="checkbox"><span class="knob"></span></label></div>
+      <div class="switchrow"><span>TRANSPARENT BG</span><label class="switch"><input id="transparent" type="checkbox"><span class="knob"></span></label></div>
+    </section>
+
+    <section class="card">
+      <div class="title">VIEW</div>
+      <div class="row"><button id="showOriginal">ORIGINAL</button><button id="showLine" class="active">LINE</button></div>
+      <div class="hint" style="margin-top:8px">処理は端末内だけで行います。画像は外部へ送信しません。</div>
+    </section>
+
+    <section class="card">
+      <div class="title">SAVE</div>
+      <div class="row"><button id="savePng" class="primary" disabled>PNG保存 / 共有</button><button id="resetBtn" disabled>RESET</button></div>
+    </section>
+  </aside>
+</main>
+<script>
+(() => {
+  const canvas = document.getElementById('canvas');
+  const ctx = canvas.getContext('2d', {willReadFrequently:true});
+  const viewer = document.getElementById('viewer');
+  const statusEl = document.getElementById('status');
+  const fileInput = document.getElementById('fileInput');
+  const cameraInput = document.getElementById('cameraInput');
+  const drop = document.getElementById('drop');
+  const threshold = document.getElementById('threshold');
+  const detail = document.getElementById('detail');
+  const line = document.getElementById('line');
+  const contrast = document.getElementById('contrast');
+  const invert = document.getElementById('invert');
+  const transparent = document.getElementById('transparent');
+  const thresholdOut = document.getElementById('thresholdOut');
+  const detailOut = document.getElementById('detailOut');
+  const lineOut = document.getElementById('lineOut');
+  const contrastOut = document.getElementById('contrastOut');
+  const modeEdge = document.getElementById('modeEdge');
+  const modeTone = document.getElementById('modeTone');
+  const showOriginal = document.getElementById('showOriginal');
+  const showLine = document.getElementById('showLine');
+  const savePng = document.getElementById('savePng');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const srcCanvas = document.createElement('canvas');
+  const srcCtx = srcCanvas.getContext('2d', {willReadFrequently:true});
+  const outCanvas = document.createElement('canvas');
+  const outCtx = outCanvas.getContext('2d', {willReadFrequently:true});
+  let loaded = false;
+  let mode = 'edge';
+  let view = 'line';
+  let raf = 0;
+  let sourceName = 'line';
+
+  const MAX_SIDE = 1800;
+  if(location.protocol !== 'https:' && location.hostname !== 'localhost'){
+    console.warn('THRESHOLD / LINE is intended to run over HTTPS.');
+  }
+
+  function setStatus(s){ statusEl.textContent = s; }
+  setStatus(location.protocol === 'https:' ? '準備完了' : 'HTTPSでの利用を推奨します');
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  async function decodeImageFile(file){
+    try{
+      return await new Promise((resolve,reject)=>{
+        const url = URL.createObjectURL(file);
+        const i = new Image();
+        i.onload=()=>{ URL.revokeObjectURL(url); resolve(i); };
+        i.onerror=(e)=>{ URL.revokeObjectURL(url); reject(e); };
+        i.src=url;
+      });
+    }catch(e){ console.warn('ObjectURL decode failed', e); }
+
+    try{
+      return await new Promise((resolve,reject)=>{
+        const fr = new FileReader();
+        fr.onerror=()=>reject(fr.error || new Error('FileReader failed'));
+        fr.onload=()=>{
+          const i=new Image();
+          i.onload=()=>resolve(i);
+          i.onerror=reject;
+          i.src=fr.result;
+        };
+        fr.readAsDataURL(file);
+      });
+    }catch(e){ console.warn('FileReader decode failed', e); }
+
+    if(typeof createImageBitmap === 'function') return await createImageBitmap(file);
+    throw new Error('この画像形式をブラウザでデコードできません');
+  }
+
+  async function loadFile(file){
+    if(!file) { setStatus('ファイルが選択されていません'); return; }
+    const name=(file.name||'').toLowerCase();
+    const looksImage = !file.type || file.type.startsWith('image/') || /\.(png|jpe?g|webp|heic|heif|gif|bmp|avif)$/i.test(name);
+    if(!looksImage) { setStatus('画像ファイルを選択してください'); return; }
+    setStatus('読み込み中… ' + (file.name || ''));
+    try{
+      const img = await decodeImageFile(file);
+      const w0 = img.width || img.naturalWidth, h0 = img.height || img.naturalHeight;
+      if(!w0 || !h0) throw new Error('画像サイズを取得できません');
+      const scale = Math.min(1, MAX_SIDE / Math.max(w0,h0));
+      const w = Math.max(1,Math.round(w0*scale)), h = Math.max(1,Math.round(h0*scale));
+      srcCanvas.width = outCanvas.width = canvas.width = w;
+      srcCanvas.height = outCanvas.height = canvas.height = h;
+      srcCtx.clearRect(0,0,w,h); srcCtx.drawImage(img,0,0,w,h);
+      if(img.close) img.close();
+      loaded = true; sourceName = (file.name || 'line').replace(/\.[^.]+$/,'');
+      viewer.classList.remove('empty'); savePng.disabled = false; resetBtn.disabled = false;
+      setStatus(w0 + '×' + h0 + ' → 処理 ' + w + '×' + h);
+      scheduleProcess();
+    }catch(err){
+      console.error(err); setStatus('画像は選択されましたがデコードに失敗：' + (err && err.message ? err.message : '形式未対応')); 
+    }
+  }
+
+  function luminanceData(imgData){
+    const d=imgData.data, n=imgData.width*imgData.height, y=new Float32Array(n);
+    const c = Number(contrast.value);
+    const factor = (259*(c+255))/(255*(259-c));
+    for(let i=0,p=0;i<n;i++,p+=4){
+      let lum=0.2126*d[p]+0.7152*d[p+1]+0.0722*d[p+2];
+      lum=clamp(factor*(lum-128)+128,0,255);
+      y[i]=lum;
+    }
+    return y;
+  }
+
+  function blurGray(src,w,h,radius){
+    radius = Math.max(0,Math.round(radius));
+    if(radius===0) return src;
+    const tmp=new Float32Array(src.length), out=new Float32Array(src.length);
+    const size=radius*2+1;
+    for(let y=0;y<h;y++){
+      let sum=0;
+      for(let x=-radius;x<=radius;x++) sum+=src[y*w+clamp(x,0,w-1)];
+      for(let x=0;x<w;x++){
+        tmp[y*w+x]=sum/size;
+        const xOut=clamp(x-radius,0,w-1), xIn=clamp(x+radius+1,0,w-1);
+        sum += src[y*w+xIn]-src[y*w+xOut];
+      }
+    }
+    for(let x=0;x<w;x++){
+      let sum=0;
+      for(let y=-radius;y<=radius;y++) sum+=tmp[clamp(y,0,h-1)*w+x];
+      for(let y=0;y<h;y++){
+        out[y*w+x]=sum/size;
+        const yOut=clamp(y-radius,0,h-1), yIn=clamp(y+radius+1,0,h-1);
+        sum += tmp[yIn*w+x]-tmp[yOut*w+x];
+      }
+    }
+    return out;
+  }
+
+  function dilate(mask,w,h,iterations){
+    let a=mask;
+    for(let k=0;k<iterations;k++){
+      const b=new Uint8Array(a.length);
+      for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+        let on=0;
+        for(let yy=Math.max(0,y-1);yy<=Math.min(h-1,y+1)&&!on;yy++)
+          for(let xx=Math.max(0,x-1);xx<=Math.min(w-1,x+1);xx++) if(a[yy*w+xx]){on=1;break;}
+        b[y*w+x]=on;
+      }
+      a=b;
+    }
+    return a;
+  }
+
+  function process(){
+    if(!loaded) return;
+    const w=srcCanvas.width,h=srcCanvas.height;
+    const img=srcCtx.getImageData(0,0,w,h);
+    let gray=luminanceData(img);
+    const detailV=Number(detail.value);
+    const blurRadius = Math.round((100-detailV)/28);
+    gray = blurGray(gray,w,h,blurRadius);
+
+    let mask=new Uint8Array(w*h);
+    if(mode==='tone'){
+      const t = 255 * (Number(threshold.value)/100);
+      for(let i=0;i<mask.length;i++) mask[i] = gray[i] < t ? 1 : 0;
+    }else{
+      const mags=new Float32Array(w*h);
+      let maxMag=1;
+      for(let y=1;y<h-1;y++){
+        for(let x=1;x<w-1;x++){
+          const i=y*w+x;
+          const a=gray[i-w-1], b=gray[i-w], c=gray[i-w+1];
+          const d=gray[i-1],               f=gray[i+1];
+          const g=gray[i+w-1], hh=gray[i+w], j=gray[i+w+1];
+          const gx=(-a+c)+(-2*d+2*f)+(-g+j);
+          const gy=(-a-2*b-c)+(g+2*hh+j);
+          const m=Math.hypot(gx,gy); mags[i]=m; if(m>maxMag) maxMag=m;
+        }
+      }
+      const normalizedCut = (1-Number(threshold.value)/100);
+      const sensitivity = 0.05 + normalizedCut*0.55;
+      const cut=maxMag*sensitivity;
+      for(let i=0;i<mask.length;i++) mask[i]=mags[i]>=cut ? 1:0;
+    }
+
+    const thickness=Math.max(1,Number(line.value));
+    if(thickness>1) mask=dilate(mask,w,h,thickness-1);
+
+    const inv=invert.checked;
+    const trans=transparent.checked;
+    const out=outCtx.createImageData(w,h), od=out.data;
+    for(let i=0,p=0;i<mask.length;i++,p+=4){
+      const lineOn = inv ? !mask[i] : !!mask[i];
+      if(trans){
+        od[p]=0;od[p+1]=0;od[p+2]=0;od[p+3]=lineOn?255:0;
+      }else{
+        const v=lineOn?0:255;
+        od[p]=v;od[p+1]=v;od[p+2]=v;od[p+3]=255;
+      }
+    }
+    outCtx.putImageData(out,0,0);
+    drawView();
+  }
+
+  function drawView(){
+    if(!loaded) return;
+    canvas.width = srcCanvas.width; canvas.height = srcCanvas.height;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(view==='original'?srcCanvas:outCanvas,0,0);
+  }
+  function scheduleProcess(){ cancelAnimationFrame(raf); raf=requestAnimationFrame(process); }
+
+  [threshold,detail,line,contrast].forEach(el=>el.addEventListener('input',()=>{
+    thresholdOut.value=threshold.value; detailOut.value=detail.value; lineOut.value=line.value; contrastOut.value=contrast.value;
+    scheduleProcess();
+  }));
+  [invert,transparent].forEach(el=>el.addEventListener('change',scheduleProcess));
+
+  modeEdge.onclick=()=>{mode='edge';modeEdge.classList.add('active');modeTone.classList.remove('active');scheduleProcess();};
+  modeTone.onclick=()=>{mode='tone';modeTone.classList.add('active');modeEdge.classList.remove('active');scheduleProcess();};
+  showOriginal.onclick=()=>{view='original';showOriginal.classList.add('active');showLine.classList.remove('active');drawView();};
+  showLine.onclick=()=>{view='line';showLine.classList.add('active');showOriginal.classList.remove('active');drawView();};
+
+  fileInput.addEventListener('change',e=>{ loadFile(e.target.files && e.target.files[0]); e.target.value=''; });
+  cameraInput.addEventListener('change',e=>{ loadFile(e.target.files && e.target.files[0]); e.target.value=''; });
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.borderColor='var(--accent)';}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.style.borderColor='#39404d';}));
+  drop.addEventListener('drop',e=>loadFile(e.dataTransfer.files[0]));
+
+  savePng.onclick=()=>{
+    if(!loaded) return;
+    outCanvas.toBlob(async blob=>{
+      if(!blob) return;
+      const filename=sourceName + '_line.png';
+      try{
+        const file=new File([blob],filename,{type:'image/png'});
+        if(navigator.canShare && navigator.canShare({files:[file]}) && navigator.share){
+          await navigator.share({files:[file],title:'THRESHOLD / LINE'});
+          setStatus('共有シートを開きました');
+          return;
+        }
+      }catch(e){
+        if(e && e.name==='AbortError') return;
+        console.warn('share failed',e);
+      }
+      const url=URL.createObjectURL(blob), a=document.createElement('a');
+      a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      setStatus('PNGを書き出しました');
+    },'image/png');
+  };
+
+  resetBtn.onclick=()=>{
+    threshold.value=48; detail.value=35; line.value=2; contrast.value=12; invert.checked=false; transparent.checked=false;
+    thresholdOut.value='48';detailOut.value='35';lineOut.value='2';contrastOut.value='12';
+    mode='edge';modeEdge.classList.add('active');modeTone.classList.remove('active');view='line';showLine.classList.add('active');showOriginal.classList.remove('active');
+    scheduleProcess();
+  };
+})();
+</script>
+</body>
+</html>
