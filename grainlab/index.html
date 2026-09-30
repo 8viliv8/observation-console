@@ -1,1 +1,105 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>GRAINLAB Input Test</title><style>body{margin:0;background:#0b0b0c;color:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:20px}.wrap{max-width:720px;margin:auto}.pick{position:relative;display:block;margin:14px 0}.pick span{display:block;background:#f3f3f3;color:#111;padding:14px;border-radius:12px;text-align:center;font-weight:700}.pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;z-index:2}.box{border:1px solid #333;border-radius:12px;padding:12px;color:#bbb;margin-top:12px;white-space:pre-wrap}.ok{color:#bdf5c4}.err{color:#ffb6b6}img{display:block;width:100%;height:auto;margin-top:16px;border-radius:12px;background:#18181a}.small{font-size:12px;color:#999;line-height:1.5}</style></head><body><div class="wrap"><h1>GRAINLAB</h1><p>iPhone Photo Library Diagnostic</p><label class="pick"><span>写真ライブラリから選ぶ</span><input id="photo" type="file" accept="image/*"></label><label class="pick"><span style="background:#222;color:#fff;border:1px solid #444">カメラで撮る</span><input id="camera" type="file" accept="image/*" capture="environment"></label><div id="status" class="box">Safariで開き、上のボタンを直接タップしてください。</div><img id="preview" hidden><p class="small">このページは画像をサーバーへ送信しません。選択した画像はブラウザ内だけでプレビューします。</p></div><script>(function(){var p=document.getElementById("photo"),c=document.getElementById("camera"),s=document.getElementById("status"),im=document.getElementById("preview");function set(t,k){s.textContent=t;s.className="box "+(k||"")}function load(f,src){if(!f)return;set(src+" を受け取りました\nname: "+f.name+"\ntype: "+(f.type||"(empty)")+"\nsize: "+(f.size/1048576).toFixed(2)+" MB");var u=URL.createObjectURL(f),x=new Image();x.onload=function(){im.src=u;im.hidden=false;set(src+" 読み込み成功\n"+x.naturalWidth+" × "+x.naturalHeight+" px","ok")};x.onerror=function(){set(src+" は選択できましたが画像デコードに失敗しました。\ntype: "+(f.type||"(empty)"),"err");URL.revokeObjectURL(u)};x.src=u}p.addEventListener("change",function(e){load(e.target.files&&e.target.files[0],"写真ライブラリ");e.target.value=""});c.addEventListener("change",function(e){load(e.target.files&&e.target.files[0],"カメラ");e.target.value=""})})();</script></body></html>
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0b0c">
+<title>GRAINLAB</title>
+<style>
+:root{--bg:#0b0b0c;--p:#151517;--p2:#1d1d20;--l:#303036;--t:#f5f5f6;--m:#a8a8af}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--t);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display",Arial,sans-serif}body{min-height:100svh}.app{display:grid;grid-template-columns:330px 1fr;height:100svh}.side{overflow:auto;background:var(--p);border-right:1px solid var(--l);padding:18px 15px 28px}.head{display:flex;justify-content:space-between;gap:10px}.head h1{margin:0;font-size:20px;letter-spacing:.14em}.head small{color:var(--m)}.tag{font-size:11px;color:var(--m);border:1px solid var(--l);border-radius:999px;padding:6px 9px;height:max-content}.sec{padding:14px 0;border-top:1px solid var(--l)}.sec:first-of-type{border-top:0}.sec h2{font-size:11px;letter-spacing:.15em;color:#ccc;margin:0 0 10px}.pick{position:relative;display:block;margin:8px 0}.pick span,.btn,.seg button{display:block;width:100%;border:1px solid var(--l);border-radius:10px;background:var(--p2);color:var(--t);padding:11px 12px;text-align:center}.pick .primary,.btn.primary,.seg button.on{background:#f2f2f2;color:#111;border-color:#f2f2f2;font-weight:700}.pick input{position:absolute;inset:0;width:100%;height:100%;opacity:0;z-index:2}.status{border:1px solid var(--l);border-radius:10px;padding:10px;margin-top:9px;color:var(--m);font-size:12px;line-height:1.45}.status.ok{color:#c3f2c9}.status.err{color:#ffb9b9}.status.busy{color:#ffe8a3}.seg{display:grid;grid-template-columns:1fr 1fr;gap:7px}.seg button{cursor:pointer}.row{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;margin:9px 0}.row label{font-size:13px}.val{font-size:12px;color:var(--m);font-variant-numeric:tabular-nums}input[type=range]{width:100%;accent-color:#fff}.help{font-size:11px;color:var(--m);line-height:1.5;margin-top:8px}.view{position:relative;display:flex;align-items:center;justify-content:center;background:#050505;overflow:hidden}.view canvas{max-width:100%;max-height:100%;display:block;touch-action:none}.empty{position:absolute;color:#777;text-align:center;pointer-events:none}.hud{position:absolute;left:12px;top:12px;display:flex;gap:6px;flex-wrap:wrap}.hud span{font-size:11px;background:#0009;border:1px solid #ffffff18;border-radius:8px;padding:6px 8px}.two{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+@media(max-width:860px){.app{grid-template-columns:1fr;grid-template-rows:56svh auto;height:auto}.view{grid-row:1;position:sticky;top:0;z-index:3}.side{grid-row:2;border-right:0;border-top:1px solid var(--l);padding-bottom:calc(28px + env(safe-area-inset-bottom))}.view canvas{max-height:56svh}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="side">
+<div class="head"><div><h1>GRAINLAB</h1><small>iPhone grain darkroom</small></div><div class="tag">100µm–1mm</div></div>
+
+<section class="sec">
+<h2>01 INPUT</h2>
+<label class="pick"><span class="primary">iPhoneの写真ライブラリから選ぶ</span><input id="photo" type="file" accept="image/*"></label>
+<label class="pick"><span>カメラで撮る</span><input id="camera" type="file" accept="image/*" capture="environment"></label>
+<div id="status" class="status">Safariで開いて、写真を選んでください。</div>
+<div class="help">画像は端末内で処理します。サーバーへのアップロードはしません。</div>
+</section>
+
+<section class="sec">
+<h2>02 MODE</h2>
+<div class="seg"><button id="mono" class="on">MONO</button><button id="color">COLOR</button></div>
+<div class="row"><label>粒子サイズ</label><span id="gv" class="val"></span></div>
+<input id="grain" type="range" min="100" max="1000" step="10" value="300">
+<div class="row"><label>粒子量</label><span id="av" class="val"></span></div>
+<input id="amount" type="range" min="0" max="100" value="45">
+</section>
+
+<section class="sec">
+<h2>03 TONAL</h2>
+<div class="row"><label>Exposure</label><span id="ev" class="val"></span></div>
+<input id="exp" type="range" min="-200" max="200" value="0">
+<div class="row"><label>Contrast</label><span id="cv" class="val"></span></div>
+<input id="contrast" type="range" min="-100" max="100" value="10">
+</section>
+
+<section class="sec">
+<h2>04 DODGE / BURN</h2>
+<div class="seg"><button id="dodge" class="on">DODGE</button><button id="burn">BURN</button></div>
+<div class="row"><label>Brush</label><span id="brv" class="val"></span></div>
+<input id="brush" type="range" min="10" max="420" value="120">
+<div class="row"><label>Strength</label><span id="sv" class="val"></span></div>
+<input id="strength" type="range" min="1" max="100" value="25">
+<div class="two" style="margin-top:8px"><button id="clear" class="btn">焼込を消す</button><button id="save" class="btn primary">PNG保存</button></div>
+</section>
+
+<section class="sec">
+<h2>05 PHYSICAL SCALE</h2>
+<div class="row"><label>出力幅</label><span id="pwv" class="val"></span></div>
+<input id="printW" type="range" min="50" max="600" value="210">
+<div class="help">出力幅(mm)から粒径を画面上のpxへ換算します。</div>
+</section>
+</aside>
+
+<main id="view" class="view">
+<canvas id="c"></canvas>
+<div id="empty" class="empty">写真を読み込んでください</div>
+<div class="hud"><span id="hg">grain 300µm</span><span id="hp">— px</span><span id="hm">MONO</span></div>
+</main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const $=id=>document.getElementById(id);
+const c=$("c"),ctx=c.getContext("2d",{alpha:false});
+const src=document.createElement("canvas"),sx=src.getContext("2d",{willReadFrequently:true});
+const mask=document.createElement("canvas"),mx=mask.getContext("2d",{willReadFrequently:true});
+let W=0,H=0,mode="mono",tool="dodge",painting=false,last=null,timer=null;
+const MAX=3072;
+
+function status(t,k){const e=$("status");e.textContent=t;e.className="status "+(k||"")}
+function labels(){const g=+$("grain").value;$("gv").textContent=g<1000?g+" µm":"1.00 mm";$("av").textContent=$("amount").value+"%";$("ev").textContent=(+$("exp").value/100).toFixed(2)+" EV";$("cv").textContent=$("contrast").value;$("brv").textContent=$("brush").value+" px";$("sv").textContent=$("strength").value+"%";$("pwv").textContent=$("printW").value+" mm";$("hg").textContent="grain "+(g<1000?g+"µm":"1mm");$("hm").textContent=mode.toUpperCase();if(W)$("hp").textContent=((g/1000)*(W/(+$("printW").value))).toFixed(1)+" px"}
+async function load(file,from){if(!file)return;status(from+"を準備中…","busy");const u=URL.createObjectURL(file);try{const im=new Image();im.src=u;try{await im.decode()}catch(_){await new Promise((ok,ng)=>{im.onload=ok;im.onerror=ng})}const iw=im.naturalWidth,ih=im.naturalHeight;if(!iw||!ih)throw new Error();const r=Math.min(1,MAX/Math.max(iw,ih));W=Math.round(iw*r);H=Math.round(ih*r);[c,src,mask].forEach(x=>{x.width=W;x.height=H});sx.clearRect(0,0,W,H);sx.drawImage(im,0,0,W,H);mx.clearRect(0,0,W,H);$("empty").style.display="none";render();status("読み込み完了 "+iw+"×"+ih+"px","ok")}catch(e){status("画像デコードに失敗しました。写真アプリで一度開いてから再試行してください。","err")}finally{setTimeout(()=>URL.revokeObjectURL(u),1200)}}
+$("photo").addEventListener("change",async e=>{await load(e.target.files&&e.target.files[0],"写真ライブラリ");e.target.value=""});
+$("camera").addEventListener("change",async e=>{await load(e.target.files&&e.target.files[0],"カメラ");e.target.value=""});
+
+function hash(x,y,s){let n=(x*374761393+y*668265263+s*69069)|0;n=(n^(n>>>13))*1274126177;return((n^(n>>>16))>>>0)/4294967295}
+function render(){if(!W)return;labels();const S=sx.getImageData(0,0,W,H),M=mx.getImageData(0,0,W,H).data,O=ctx.createImageData(W,H),ex=Math.pow(2,+$("exp").value/100),ct=+$("contrast").value/100,amt=+$("amount").value/100,gmic=+$("grain").value,gpx=Math.max(.8,(gmic/1000)*(W/(+$("printW").value)));
+for(let y=0;y<H;y++)for(let x=0;x<W;x++){const i=(y*W+x)*4;let r=S.data[i]/255,g=S.data[i+1]/255,b=S.data[i+2]/255,local=(M[i]-M[i+2])/255*1.5,k=ex*Math.pow(2,local);r*=k;g*=k;b*=k;let L=.2126*r+.7152*g+.0722*b,adj=(L-.5)*(1+ct*1.7)+.5,gg=L>1e-5?adj/L:1;r*=gg;g*=gg;b*=gg;if(mode==="mono"){let m=.24*r+.68*g+.08*b;r=g=b=m}let cellX=Math.floor(x/gpx),cellY=Math.floor(y/gpx),n=(hash(cellX,cellY,17)-.5)*2,str=amt*(.08+.28*(1-L));if(mode==="color"){r+=n*str;g+=n*str*.85;b+=n*str*.7}else{r+=n*str;g+=n*str;b+=n*str}O.data[i]=Math.max(0,Math.min(255,r*255));O.data[i+1]=Math.max(0,Math.min(255,g*255));O.data[i+2]=Math.max(0,Math.min(255,b*255));O.data[i+3]=255}
+ctx.putImageData(O,0,0)}
+function sched(){clearTimeout(timer);timer=setTimeout(render,70)}
+document.querySelectorAll("input[type=range]").forEach(x=>x.addEventListener("input",()=>{labels();sched()}));
+function toggle(a,b,on){$(a).classList.toggle("on",on);$(b).classList.toggle("on",!on)}
+$("mono").onclick=()=>{mode="mono";toggle("mono","color",1);render()};$("color").onclick=()=>{mode="color";toggle("mono","color",0);render()};
+$("dodge").onclick=()=>{tool="dodge";toggle("dodge","burn",1)};$("burn").onclick=()=>{tool="burn";toggle("dodge","burn",0)};
+
+function point(e){const r=c.getBoundingClientRect();return{x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}}
+function dab(p){const R=+$("brush").value/2,a=+$("strength").value/100*.18,g=mx.createRadialGradient(p.x,p.y,R*.2,p.x,p.y,R);g.addColorStop(0,tool==="dodge"?"rgba(255,0,0,"+a+")":"rgba(0,0,255,"+a+")");g.addColorStop(1,tool==="dodge"?"rgba(255,0,0,0)":"rgba(0,0,255,0)");mx.globalCompositeOperation="lighter";mx.fillStyle=g;mx.beginPath();mx.arc(p.x,p.y,R,0,Math.PI*2);mx.fill();mx.globalCompositeOperation="source-over"}
+c.addEventListener("pointerdown",e=>{if(!W)return;painting=true;c.setPointerCapture(e.pointerId);last=point(e);dab(last);sched()});
+c.addEventListener("pointermove",e=>{if(!painting)return;const p=point(e),dx=p.x-last.x,dy=p.y-last.y,d=Math.hypot(dx,dy),st=Math.max(2,+$("brush").value*.12);for(let z=0;z<=d;z+=st){const t=d?z/d:0;dab({x:last.x+dx*t,y:last.y+dy*t})}last=p;sched()});
+["pointerup","pointercancel","pointerleave"].forEach(n=>c.addEventListener(n,()=>{painting=false;last=null}));
+$("clear").onclick=()=>{if(!W)return;mx.clearRect(0,0,W,H);render()};
+$("save").onclick=()=>{if(!W)return;c.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="GRAINLAB_"+mode+"_"+$("grain").value+"um.png";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1500)},"image/png")};
+labels();
+})();
+</script>
+</body></html>
